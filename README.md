@@ -188,3 +188,7 @@ agent-flow/
     ├── codebase-explorer.md
     └── test-runner.md
 ```
+
+## Inspiration
+
+- [superpowers](https://github.com/obra/superpowers) — the original skill-driven workflow this project riffs on.
