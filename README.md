@@ -3,61 +3,46 @@
 
 # agent-flow
 
-A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator, no forced human checkpoints. Skills trigger on intent and hand off to each other.
+> ⚠️ **Alpha.** APIs, skill names, and the plan format may change without notice. Use on throwaway branches until it stabilizes.
+
+A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator. Skills trigger on intent and hand off to each other.
 
 ## Why
 
 Ad-hoc agentic coding skips planning, over-scopes, and silently pushes code. `agent-flow` adds:
-- A **plan file on disk** (`.claude/plan/{slug}.md`) as the single source of truth between planning and execution
-- **Self-triggering skills** — `writing-plans` fires when you describe a dev task, then chains to whichever execution mode you pick
-- **Two execution modes** — in-session (watch every edit) or subagent-driven (one fresh subagent per STEP, main chat stays light)
-- **A shared `debugger` skill** the executor loads when stuck, instead of guessing
+- 📄 **Plan on disk** (`.claude/plan/{slug}.md`) — survives compaction, reviewable in your editor
+- 🔗 **Self-triggering skills** — describe a task, the flow wires itself up
+- 🎛️ **Two execution flavors** — watch every edit, or delegate per-STEP to fresh subagents
+- 🐞 **Shared `debugger` skill** — loaded on demand when an executor gets stuck
 
 ## Flow
 
 ```mermaid
-flowchart TD
-    Start([User: free-form dev task]) --> Meta[using-agent-flow<br/>checks for skill match]
-    Meta --> WP[writing-plans skill]
+flowchart LR
+    User([💬 describe task]) ==> Plan[📝 <b>plan</b><br/><i>writing-plans</i>]
+    Plan ==> File[(📄 .claude/plan/*.md)]
+    File ==> Mode{{🎛️ mode?}}
+    Mode ==>|in-session| Exec[⚡ <b>execute</b><br/><i>executing-plans</i>]
+    Mode ==>|subagents| Sub[🧩 <b>delegate</b><br/><i>subagent-execution</i>]
+    Exec ==> Done([✅ test &amp; done])
+    Sub ==> Done
 
-    WP -.ticket ref.-> TF[ticket-fetcher agent<br/>Linear MCP]
-    WP -.repo context.-> CE[codebase-explorer agent<br/>GitNexus MCP]
+    Plan -.-> Ctx[[🔎 ticket + repo context]]
+    Exec -.stuck.-> Dbg[[🐞 debugger]]
+    Sub -.stuck.-> Dbg
 
-    TF -.-> WP
-    CE -.-> WP
+    classDef main fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#111
+    classDef side fill:#f3e8ff,stroke:#9333ea,stroke-dasharray:3 3,color:#111
+    classDef pick fill:#fde68a,stroke:#d97706,color:#111
+    classDef file fill:#e0f2fe,stroke:#0284c7,color:#111
 
-    WP --> PlanFile[(.claude/plan/slug.md)]
-    PlanFile --> Handoff{mode?}
-
-    Handoff -->|1. in-session| EP[executing-plans skill<br/>TodoWrite + edits<br/>in this chat]
-    Handoff -->|2. subagents| SE[subagent-execution skill<br/>one subagent per STEP<br/>controller reviews]
-    Handoff -->|cancel| End1([stop])
-
-    EP -.stuck.-> Dbg[debugger skill]
-    Dbg -.fix.-> EP
-    Dbg -.frontend.-> Chrome[chrome-devtools skill]
-
-    SE -.per step.-> Sub[general-purpose subagent<br/>fresh context]
-    Sub -.-> SE
-
-    EP --> Tests{run test-runner?}
-    SE --> Tests
-    Tests -->|yes| TR[test-runner agent]
-    Tests -->|no| End2([done])
-    TR --> End2
-
-    classDef skill fill:#dcfce7,stroke:#16a34a,color:#111
-    classDef agent fill:#dbeafe,stroke:#2563eb,color:#111
-    classDef artifact fill:#f3e8ff,stroke:#9333ea,color:#111
-    classDef choice fill:#fde68a,stroke:#d97706,color:#111
-
-    class Meta,WP,EP,SE,Dbg,Chrome skill
-    class TF,CE,TR,Sub agent
-    class PlanFile artifact
-    class Handoff,Tests choice
+    class Plan,Exec,Sub main
+    class Ctx,Dbg side
+    class Mode pick
+    class File file
 ```
 
-Legend: 🟢 skills · 🔵 sub-agents · 🟡 user choice · 🟣 artifact on disk
+One path, two execution flavors. Context gathering and the debugger show up only when needed.
 
 ## Components
 
