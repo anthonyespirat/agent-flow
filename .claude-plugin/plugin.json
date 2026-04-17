@@ -1,13 +1,13 @@
 {
-  "name": "agent-flow",
+  "name": "forgeflow",
   "version": "0.1.0",
   "description": "Skill-driven dev workflow. writing-plans gathers context via sub-agents and writes .claude/plan/{slug}.md, then hands off to either in-session execution (executing-plans) or subagent-driven execution (subagent-execution). Includes a shared debugger skill for on-demand diagnosis.",
   "author": {
     "name": "Anthony Espirat",
     "email": "github.retrace234@passmail.net"
   },
-  "homepage": "https://github.com/anthonyespirat/agent-flow",
-  "repository": "https://github.com/anthonyespirat/agent-flow",
+  "homepage": "https://github.com/anthonyespirat/forgeflow",
+  "repository": "https://github.com/anthonyespirat/forgeflow",
   "license": "MIT",
   "keywords": [
     "agents",

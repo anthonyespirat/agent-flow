@@ -1,9 +1,9 @@
 ---
-name: using-agent-flow
+name: using-forgeflow
 description: Use when the user describes a dev task (feature, bugfix, refactor, or anything that will touch code). Establishes the skill-check discipline — before writing code or answering, verify whether writing-plans, executing-plans, or subagent-execution should run first.
 ---
 
-# Using agent-flow
+# Using forgeflow
 
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, skip this skill — you already have your instructions.
@@ -11,7 +11,7 @@ If you were dispatched as a subagent to execute a specific task, skip this skill
 
 ## The rule
 
-**For any task that will touch code, check the agent-flow skills BEFORE responding or editing.** The default instinct is to read files and start typing. That's the mistake this skill exists to prevent.
+**For any task that will touch code, check the forgeflow skills BEFORE responding or editing.** The default instinct is to read files and start typing. That's the mistake this skill exists to prevent.
 
 If there's even a 1% chance that one of these applies, invoke it:
 
