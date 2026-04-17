@@ -87,3 +87,15 @@ SCOPE DETECTED: backend | frontend | fullstack
 - Cap output at ~400 words.
 - If GitNexus isn't indexed for this repo (`list_repos` returns nothing relevant), STOP and report: "Repo not indexed — user should run `gitnexus analyze`." Don't fall back to manual grep.
 - If no guideline skills apply, say so — don't invent conventions.
+
+## Output compression (optional)
+
+If the `caveman` skill is available, invoke it at `caveman-full` and write the **free-text content** of these sections in caveman: `GUIDELINE SKILLS FOUND` (the "why it applies" and "key rules" parts), `PATTERNS TO FOLLOW`, and `GOTCHAS`. Your report is consumed by the `writing-plans` skill as machine context, not shown to the user — caveman roughly halves the tokens without losing signal.
+
+**Keep plain (never caveman):**
+- Section headers themselves (`TASK CLASS:`, `GITNEXUS PATH:`, etc.)
+- `TASK CLASS` and `SCOPE DETECTED` values (matcher-sensitive)
+- File paths, symbol names, skill names, and any impact scores
+- The "Repo not indexed" error message if you have to emit it
+
+If `caveman` isn't available, write plain English. Don't fake caveman style on your own — the skill does it correctly.

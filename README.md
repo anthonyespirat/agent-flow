@@ -1,109 +1,109 @@
 # agent-flow
 
-Structured dev workflow for Claude Code (and opencode): **describe → plan → human-validate → implement → test → human-decide**. Heavy work is delegated to specialized sub-agents so the main conversation stays light.
+A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator, no forced human checkpoints. Skills trigger on intent and hand off to each other.
 
 ## Why
 
-Ad-hoc agentic coding tends to skip planning, over-scope, and silently push code. `agent-flow` adds:
+Ad-hoc agentic coding skips planning, over-scopes, and silently pushes code. `agent-flow` adds:
 - A **plan file on disk** (`.claude/plan/{slug}.md`) as the single source of truth between planning and execution
-- **Hard human checkpoints** at plan validation, code review, and decision points
-- **Specialized sub-agents** with narrow tool sets and output contracts
-- A **shared `debugger` skill** implementer and test-runner call when they get stuck — instead of guessing or flailing
+- **Self-triggering skills** — `writing-plans` fires when you describe a dev task, then chains to whichever execution mode you pick
+- **Two execution modes** — in-session (watch every edit) or subagent-driven (one fresh subagent per STEP, main chat stays light)
+- **A shared `debugger` skill** the executor loads when stuck, instead of guessing
 
 ## Flow
 
 ```mermaid
 flowchart TD
-    Start([User: free-form description]) --> Intake[1. Intake<br/>orchestrator<br/>detect ticket + scope]
+    Start([User: free-form dev task]) --> Meta[using-agent-flow<br/>checks for skill match]
+    Meta --> WP[writing-plans skill]
 
-    Intake -->|Linear ref present| Fetch[2. ticket-fetcher<br/>Linear MCP]
-    Intake -->|no ref| Explore
-    Fetch --> Explore[3. codebase-explorer<br/>GitNexus MCP<br/>scan skills/]
+    WP -.ticket ref.-> TF[ticket-fetcher agent<br/>Linear MCP]
+    WP -.repo context.-> CE[codebase-explorer agent<br/>GitNexus MCP]
 
-    Explore --> Plan[4. planner<br/>writes .claude/plan/slug.md]
+    TF -.-> WP
+    CE -.-> WP
 
-    Plan --> CP1{🛑 HUMAN<br/>validate plan?}
-    CP1 -->|change request| Plan
-    CP1 -->|cancel| End1([abort])
-    CP1 -->|go| Impl
+    WP --> PlanFile[(.claude/plan/slug.md)]
+    PlanFile --> Handoff{mode?}
 
-    Impl[5. implementer<br/>reads plan.md<br/>TodoWrite from STEPS<br/>execute in order]
+    Handoff -->|1. in-session| EP[executing-plans skill<br/>TodoWrite + edits<br/>in this chat]
+    Handoff -->|2. subagents| SE[subagent-execution skill<br/>one subagent per STEP<br/>controller reviews]
+    Handoff -->|cancel| End1([stop])
 
-    Impl -.stuck on error.-> Dbg[debugger skill<br/>references/*.md]
-    Dbg -.FIX SUGGESTION.-> Impl
-    Dbg -.frontend runtime.-> ChromeDT[chrome-devtools skill]
-    ChromeDT -.-> Dbg
+    EP -.stuck.-> Dbg[debugger skill]
+    Dbg -.fix.-> EP
+    Dbg -.frontend.-> Chrome[chrome-devtools skill]
 
-    Impl --> CP2{🛑 HUMAN<br/>review diff?}
-    CP2 -->|changes| Impl
-    CP2 -->|go| Test
+    SE -.per step.-> Sub[general-purpose subagent<br/>fresh context]
+    Sub -.-> SE
 
-    Test[6. test-runner<br/>typecheck + delegates<br/>browser to chrome-devtools]
+    EP --> Tests{run test-runner?}
+    SE --> Tests
+    Tests -->|yes| TR[test-runner agent]
+    Tests -->|no| End2([done])
+    TR --> End2
 
-    Test -.unclear failure.-> Dbg2[debugger skill]
-    Dbg2 -.diagnosis.-> Test
-
-    Test -->|pass| CP3
-    Test -->|fail| FixDec{ask user:<br/>fix?}
-    FixDec -->|yes, iter < 2| Impl
-    FixDec -->|no / iter ≥ 2| CP3
-
-    CP3{🛑 HUMAN<br/>next?}
-    CP3 -->|PR| PR([open PR])
-    CP3 -->|commit| Commit([commit])
-    CP3 -->|other| End2([stop])
-
-    classDef human fill:#fde68a,stroke:#d97706,color:#111
-    classDef agent fill:#dbeafe,stroke:#2563eb,color:#111
     classDef skill fill:#dcfce7,stroke:#16a34a,color:#111
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#111
     classDef artifact fill:#f3e8ff,stroke:#9333ea,color:#111
+    classDef choice fill:#fde68a,stroke:#d97706,color:#111
 
-    class CP1,CP2,CP3,FixDec human
-    class Fetch,Explore,Plan,Impl,Test agent
-    class Dbg,Dbg2,ChromeDT skill
-    class Plan artifact
+    class Meta,WP,EP,SE,Dbg,Chrome skill
+    class TF,CE,TR,Sub agent
+    class PlanFile artifact
+    class Handoff,Tests choice
 ```
 
-Legend: 🟡 human checkpoints · 🔵 sub-agents · 🟢 skills · ⚪ start/end
+Legend: 🟢 skills · 🔵 sub-agents · 🟡 user choice · 🟣 artifact on disk
 
 ## Components
 
-### Orchestrator skill
+### Skills
 
 | Skill | Role |
 |---|---|
-| `skills/dev-flow/SKILL.md` | Main entrypoint. Routes each step to the right sub-agent and enforces checkpoints. |
+| `skills/using-agent-flow/SKILL.md` | Meta. Enforces "check for a flow skill before responding or editing on any dev task." |
+| `skills/writing-plans/SKILL.md` | Gathers ticket + repo context via sub-agents, writes `.claude/plan/{slug}.md`, self-reviews, ends with the mode handoff. |
+| `skills/executing-plans/SKILL.md` | **Mode 1 — in-session.** Critically reviews the plan, TodoWrite from STEPS, executes each step in the current chat, loads `debugger` on errors. |
+| `skills/subagent-execution/SKILL.md` | **Mode 2 — subagent-driven.** Controller reads plan + owns todo. Dispatches a fresh general-purpose subagent per STEP with precisely scoped context, reviews the report, moves on. |
+| `skills/debugger/SKILL.md` | Diagnostic methodology + routing by symptom. Invoked by the executor when stuck. |
 
 ### Sub-agents
 
-| Agent | Role | Tools |
+| Agent | Role | Used by |
 |---|---|---|
-| `agents/ticket-fetcher.md` | Fetch a Linear ticket, return a short summary | `linear` |
-| `agents/codebase-explorer.md` | Map relevant symbols/files via GitNexus, detect guideline skills | `gitnexus`, `Read` |
-| `agents/planner.md` | Write `.claude/plan/{slug}.md` with GOAL/APPROACH/STEPS/RISKS | `Read`, `Write` |
-| `agents/implementer.md` | Read plan, build todo via `TodoWrite`, execute STEPS in order | `Read`, `Edit`, `Write`, `Glob`, `Grep`, `TodoWrite`, `Bash`, `LSP` |
-| `agents/test-runner.md` | Typecheck + delegate browser checks to `chrome-devtools` skill | `Bash`, `Read`, `chrome-devtools` |
+| `agents/ticket-fetcher.md` | Fetch a Linear ticket, return a short summary | `writing-plans` |
+| `agents/codebase-explorer.md` | Map relevant symbols/files via GitNexus, detect guideline skills | `writing-plans` |
+| `agents/test-runner.md` | Typecheck + delegate browser checks to `chrome-devtools` | `executing-plans`, `subagent-execution` (at end, optional) |
 
-### Shared skill
+### `debugger` skill references
 
-| Skill | Purpose |
-|---|---|
-| `skills/debugger/SKILL.md` | Diagnostic methodology + routing by symptom |
-| `skills/debugger/references/typecheck.md` | TS compile errors (TS2322, TS2339, TS7006, …) |
-| `skills/debugger/references/lint.md` | ESLint / Prettier |
-| `skills/debugger/references/lsp.md` | `hover`, `goToDefinition`, `findReferences`, call hierarchy |
-| `skills/debugger/references/runtime-errors.md` | Stack traces, reproduction, promise rejections |
-| `skills/debugger/references/console-logging.md` | Diagnostic instrumentation (with removal discipline) |
-| `skills/debugger/references/chrome-mcp.md` | Pointer to the existing `chrome-devtools` skill |
+`skills/debugger/references/` — typecheck, lint, lsp, runtime-errors, console-logging, chrome-mcp. See `skills/debugger/SKILL.md` for routing.
 
 ## Plan artifact
 
-The plan is a single markdown file at `.claude/plan/{slug}.md` in the project's working directory.
+A single markdown file at `.claude/plan/{slug}.md`.
 
-- `{slug}` = Linear ticket id (lowercased, e.g. `eng-123`) if present, otherwise a short kebab-case slug.
-- Format: `GOAL`, `APPROACH`, `SKILLS TO APPLY`, `FILES TO CHANGE`, `STEPS` (checklist), `TESTS TO UPDATE/ADD`, `RISKS`, `OUT OF SCOPE`.
-- On change requests, the planner **overwrites** the same file — no stale versions.
-- The implementer builds its todo from `STEPS` at the start of execution.
+- `{slug}` = lowercased Linear ticket id (e.g. `eng-123`) if present, else a short kebab-case slug (≤ 40 chars, no dates).
+- Sections: `GOAL`, `APPROACH`, `SKILLS TO APPLY`, `FILES TO CHANGE`, `STEPS` (checklist), `TESTS TO UPDATE/ADD`, `RISKS`, `OUT OF SCOPE`.
+- Every STEP starts with `- [ ]` — the executor builds its todo from these.
+- On change requests, `writing-plans` overwrites the same file. No `v2`.
+
+## How skills trigger
+
+There is no orchestrator. The skills chain themselves:
+
+1. You describe a dev task → Claude Code's skill matcher fires `using-agent-flow` (meta) which checks whether `writing-plans` applies. For any non-trivial code task, it does.
+2. `writing-plans` runs → writes the plan → prints the handoff block.
+3. You pick `1` or `2` → that skill fires and executes.
+4. Executor ends by offering `test-runner`.
+
+You can also invoke any skill directly:
+
+```
+/write-plan add rate limiter to login endpoint
+/execute-plan .claude/plan/eng-482.md
+```
 
 ## Install
 
@@ -115,7 +115,7 @@ Local path install (for testing before publishing):
 claude plugin install ~/code/agent-flow
 ```
 
-From a GitHub repo (once pushed):
+From a GitHub repo:
 
 ```bash
 claude plugin install anthonyespirat/agent-flow
@@ -127,47 +127,19 @@ Uninstall:
 claude plugin uninstall agent-flow
 ```
 
-### As a marketplace entry
-
-Create a separate repo (e.g. `agent-flow-marketplace`) with `.claude-plugin/marketplace.json`:
-
-```json
-{
-  "name": "your-marketplace",
-  "owner": { "name": "Your Team", "email": "team@example.com" },
-  "plugins": [
-    {
-      "name": "agent-flow",
-      "source": { "source": "github", "repo": "anthonyespirat/agent-flow" },
-      "description": "Structured dev workflow orchestrator",
-      "version": "0.1.0"
-    }
-  ]
-}
-```
-
-Then users add it:
-
-```bash
-claude plugin marketplace add your-org/agent-flow-marketplace
-claude plugin install agent-flow@your-marketplace
-```
-
 ### Manual copy (no plugin system)
 
 Claude Code:
 
 ```bash
-cp -r skills/dev-flow ~/.claude/skills/
-cp -r skills/debugger ~/.claude/skills/
+cp -r skills/* ~/.claude/skills/
 cp agents/*.md ~/.claude/agents/
 ```
 
 opencode:
 
 ```bash
-cp -r skills/dev-flow ~/.config/opencode/skill/
-cp -r skills/debugger ~/.config/opencode/skill/
+cp -r skills/* ~/.config/opencode/skill/
 # opencode agents live in a different layout — adapt as needed
 ```
 
@@ -180,28 +152,29 @@ cp -r skills/debugger ~/.config/opencode/skill/
 
 ## Usage
 
-Trigger from the main chat:
+Just describe the task — `using-agent-flow` + `writing-plans` trigger automatically:
 
 ```
-Use dev-flow: add a rate limiter to the login endpoint
+add a rate limiter to the login endpoint
 ```
 
-or, with a ticket:
+or with a ticket:
 
 ```
-Use dev-flow: ENG-482
+ENG-482
 ```
 
-The orchestrator will announce the steps it will take and pause at each human checkpoint.
+The flow: plan is written, you're shown a summary + the path + two mode options. Reply `1` or `2`.
 
 ## Design principles
 
-- **The orchestrator routes, sub-agents execute.** The main conversation never does raw exploration or editing itself.
-- **Plan on disk, not in context.** The plan survives context compaction and can be reviewed by the human in their editor.
-- **One todo, owned by the implementer.** Avoid double task tracking between orchestrator and worker.
-- **Debugger is a shared skill, not an agent.** Any executor (implementer, test-runner) can load its methodology when stuck, without spawning a new process.
-- **No destructive ops without explicit go.** Commit, push, and PR are after CP3, never before.
-- **Short reports.** Every sub-agent caps output (200-500 words). Raw dumps kill the orchestrator's context.
+- **Skills, not orchestration.** Each skill knows what comes next. No top-level router.
+- **Plan on disk, not in context.** Survives compaction; reviewable in your editor.
+- **Choice of isolation.** In-session for feedback fidelity, subagent-driven for big plans and context hygiene — you pick per task.
+- **One todo, owned by the executor.** No double-tracking.
+- **Debugger is a shared skill.** Any executor can load its methodology when stuck.
+- **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
+- **Short reports.** Every agent caps output (~200–500 words). Raw dumps kill the controller's context.
 
 ## Repository layout
 
@@ -211,8 +184,10 @@ agent-flow/
 │   └── plugin.json
 ├── README.md
 ├── skills/
-│   ├── dev-flow/
-│   │   └── SKILL.md
+│   ├── using-agent-flow/SKILL.md
+│   ├── writing-plans/SKILL.md
+│   ├── executing-plans/SKILL.md
+│   ├── subagent-execution/SKILL.md
 │   └── debugger/
 │       ├── SKILL.md
 │       └── references/
@@ -225,7 +200,5 @@ agent-flow/
 └── agents/
     ├── ticket-fetcher.md
     ├── codebase-explorer.md
-    ├── planner.md
-    ├── implementer.md
     └── test-runner.md
 ```
