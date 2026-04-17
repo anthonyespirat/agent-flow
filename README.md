@@ -18,7 +18,7 @@ A skill-driven dev workflow for Claude Code (and opencode): **describe → plan 
 - **Shared debugger.** Any executor loads it when stuck.
 - **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
 - **Short reports.** Agent output capped (~200–500 words). Raw dumps kill context.
-- **GitNexus over grep.** Code exploration goes through the GitNexus knowledge graph — faster, more precise, and far cheaper in tokens than repeated file scans.
+- **[GitNexus](https://github.com/abhigyanpatwari/GitNexus) over grep.** Code exploration goes principaly through the GitNexus knowledge graph — faster, more precise, and far cheaper in tokens than repeated file scans.
 
 ## Flow
 
