@@ -1,0 +1,25 @@
+{
+  "name": "agent-flow",
+  "version": "0.1.0",
+  "description": "Structured dev workflow orchestrator with human checkpoints. Routes exploration, planning, implementation, and testing to specialized sub-agents and writes the plan to .claude/plan/{slug}.md. Includes a shared debugger skill for on-demand diagnosis.",
+  "author": {
+    "name": "Anthony Espirat",
+    "email": "github.retrace234@passmail.net"
+  },
+  "homepage": "https://github.com/anthonyespirat/agent-flow",
+  "repository": "https://github.com/anthonyespirat/agent-flow",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "skills",
+    "workflow",
+    "orchestrator",
+    "dev-flow",
+    "debugger",
+    "planner",
+    "gitnexus",
+    "linear"
+  ],
+  "agents": ["./agents/"],
+  "skills": ["./skills/"]
+}

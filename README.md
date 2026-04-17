@@ -107,16 +107,63 @@ The plan is a single markdown file at `.claude/plan/{slug}.md` in the project's 
 
 ## Install
 
-### Claude Code
+### As a Claude Code plugin (recommended)
+
+Local path install (for testing before publishing):
 
 ```bash
-# from the repo root
+claude plugin install ~/code/agent-flow
+```
+
+From a GitHub repo (once pushed):
+
+```bash
+claude plugin install anthonyespirat/agent-flow
+```
+
+Uninstall:
+
+```bash
+claude plugin uninstall agent-flow
+```
+
+### As a marketplace entry
+
+Create a separate repo (e.g. `agent-flow-marketplace`) with `.claude-plugin/marketplace.json`:
+
+```json
+{
+  "name": "your-marketplace",
+  "owner": { "name": "Your Team", "email": "team@example.com" },
+  "plugins": [
+    {
+      "name": "agent-flow",
+      "source": { "source": "github", "repo": "anthonyespirat/agent-flow" },
+      "description": "Structured dev workflow orchestrator",
+      "version": "0.1.0"
+    }
+  ]
+}
+```
+
+Then users add it:
+
+```bash
+claude plugin marketplace add your-org/agent-flow-marketplace
+claude plugin install agent-flow@your-marketplace
+```
+
+### Manual copy (no plugin system)
+
+Claude Code:
+
+```bash
 cp -r skills/dev-flow ~/.claude/skills/
 cp -r skills/debugger ~/.claude/skills/
 cp agents/*.md ~/.claude/agents/
 ```
 
-### opencode
+opencode:
 
 ```bash
 cp -r skills/dev-flow ~/.config/opencode/skill/
@@ -160,6 +207,8 @@ The orchestrator will announce the steps it will take and pause at each human ch
 
 ```
 agent-flow/
+├── .claude-plugin/
+│   └── plugin.json
 ├── README.md
 ├── skills/
 │   ├── dev-flow/
