@@ -19,6 +19,7 @@ A skill-driven dev workflow for Claude Code (and opencode): **describe → plan 
 - **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
 - **Short reports.** Agent output capped (~200–500 words). Raw dumps kill context.
 - **🚀 [GitNexus](https://github.com/abhigyanpatwari/GitNexus) over grep.** Code exploration goes principaly through the GitNexus knowledge graph — faster, more precise, and far cheaper in tokens than repeated file scans.
+- **🦴 [Caveman](https://github.com/JuliusBrussee/caveman) for agent-to-agent.** Selected skills and sub-agents emit their machine-consumed sections (reports handed to another skill, not shown to the user) in caveman style — cuts the payload roughly in half while preserving signal.
 
 ## Flow
 
@@ -100,6 +101,7 @@ You can also invoke any skill directly:
 
 - **Linear MCP** — for `ticket-fetcher` (optional, only if you use Linear refs)
 - **GitNexus MCP + indexed repo** — `codebase-explorer` requires it; run `npx gitnexus analyze` in the project first
+- **[caveman](https://github.com/JuliusBrussee/caveman) skill** — agent-to-agent payloads (e.g. `codebase-explorer` → `writing-plans`) compress through it
 - **chrome-devtools skill** — used by `test-runner` and referenced by `debugger` for frontend checks
 - **TypeScript project** — `test-runner` defaults to `tsc --noEmit`
 
