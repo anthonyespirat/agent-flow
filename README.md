@@ -7,13 +7,17 @@
 
 A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator. Skills trigger on intent and hand off to each other.
 
-## Why
+*Built by developers, for developers.*
 
-Ad-hoc agentic coding skips planning, over-scopes, and silently pushes code. `agent-flow` adds:
-- 📄 **Plan on disk** (`.claude/plan/{slug}.md`) — survives compaction, reviewable in your editor
-- 🔗 **Self-triggering skills** — describe a task, the flow wires itself up
-- 🎛️ **Two execution flavors** — watch every edit, or delegate per-STEP to fresh subagents
-- 🐞 **Shared `debugger` skill** — loaded on demand when an executor gets stuck
+## Design principles
+
+- **Skills, not orchestration.** Each skill knows what comes next. No top-level router.
+- **Plan on disk, not in context.** Survives compaction; reviewable in your editor.
+- **Choice of isolation.** In-session for feedback fidelity, subagent-driven for big plans — you pick per task.
+- **One todo, owned by the executor.** No double-tracking.
+- **Shared debugger.** Any executor loads it when stuck.
+- **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
+- **Short reports.** Agent output capped (~200–500 words). Raw dumps kill context.
 
 ## Flow
 
@@ -50,23 +54,19 @@ One path, two execution flavors. Context gathering and the debugger show up only
 
 | Skill | Role |
 |---|---|
-| `skills/using-agent-flow/SKILL.md` | Meta. Enforces "check for a flow skill before responding or editing on any dev task." |
-| `skills/writing-plans/SKILL.md` | Gathers ticket + repo context via sub-agents, writes `.claude/plan/{slug}.md`, self-reviews, ends with the mode handoff. |
-| `skills/executing-plans/SKILL.md` | **Mode 1 — in-session.** Critically reviews the plan, TodoWrite from STEPS, executes each step in the current chat, loads `debugger` on errors. |
-| `skills/subagent-execution/SKILL.md` | **Mode 2 — subagent-driven.** Controller reads plan + owns todo. Dispatches a fresh general-purpose subagent per STEP with precisely scoped context, reviews the report, moves on. |
-| `skills/debugger/SKILL.md` | Diagnostic methodology + routing by symptom. Invoked by the executor when stuck. |
+| `using-agent-flow` | Entry gate — routes dev tasks into the flow. |
+| `writing-plans` | Gathers context, writes `.claude/plan/{slug}.md`. |
+| `executing-plans` | Runs the plan in-session. |
+| `subagent-execution` | Runs the plan via one subagent per STEP. |
+| `debugger` | Diagnostic playbook, loaded on failure. |
 
 ### Sub-agents
 
-| Agent | Role | Used by |
-|---|---|---|
-| `agents/ticket-fetcher.md` | Fetch a Linear ticket, return a short summary | `writing-plans` |
-| `agents/codebase-explorer.md` | Map relevant symbols/files via GitNexus, detect guideline skills | `writing-plans` |
-| `agents/test-runner.md` | Typecheck + delegate browser checks to `chrome-devtools` | `executing-plans`, `subagent-execution` (at end, optional) |
-
-### `debugger` skill references
-
-`skills/debugger/references/` — typecheck, lint, lsp, runtime-errors, console-logging, chrome-mcp. See `skills/debugger/SKILL.md` for routing.
+| Agent | Role |
+|---|---|
+| `ticket-fetcher` | Pulls a Linear ticket summary. |
+| `codebase-explorer` | Maps relevant files via GitNexus. |
+| `test-runner` | Typecheck + optional browser check. |
 
 ## Plan artifact
 
@@ -92,6 +92,15 @@ You can also invoke any skill directly:
 /write-plan add rate limiter to login endpoint
 /execute-plan .claude/plan/eng-482.md
 ```
+
+## Prerequisites
+
+> These must be set up manually. The plugin installer does **not** handle them.
+
+- **Linear MCP** — for `ticket-fetcher` (optional, only if you use Linear refs)
+- **GitNexus MCP + indexed repo** — `codebase-explorer` requires it; run `npx gitnexus analyze` in the project first
+- **chrome-devtools skill** — used by `test-runner` and referenced by `debugger` for frontend checks
+- **TypeScript project** — `test-runner` defaults to `tsc --noEmit`
 
 ## Install
 
@@ -133,13 +142,6 @@ cp -r skills/* ~/.config/opencode/skill/
 # opencode agents live in a different layout — adapt as needed
 ```
 
-## Prerequisites
-
-- **Linear MCP** — for `ticket-fetcher` (optional, only if you use Linear refs)
-- **GitNexus MCP + indexed repo** — `codebase-explorer` requires it; run `npx gitnexus analyze` in the project first
-- **chrome-devtools skill** — used by `test-runner` and referenced by `debugger` for frontend checks
-- **TypeScript project** — `test-runner` defaults to `tsc --noEmit`
-
 ## Usage
 
 Just describe the task — `using-agent-flow` + `writing-plans` trigger automatically:
@@ -155,16 +157,6 @@ ENG-482
 ```
 
 The flow: plan is written, you're shown a summary + the path + two mode options. Reply `1` or `2`.
-
-## Design principles
-
-- **Skills, not orchestration.** Each skill knows what comes next. No top-level router.
-- **Plan on disk, not in context.** Survives compaction; reviewable in your editor.
-- **Choice of isolation.** In-session for feedback fidelity, subagent-driven for big plans and context hygiene — you pick per task.
-- **One todo, owned by the executor.** No double-tracking.
-- **Debugger is a shared skill.** Any executor can load its methodology when stuck.
-- **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
-- **Short reports.** Every agent caps output (~200–500 words). Raw dumps kill the controller's context.
 
 ## Repository layout
 
