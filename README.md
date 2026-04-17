@@ -1,7 +1,7 @@
 <img width="1573" height="558" alt="image" src="https://github.com/user-attachments/assets/fc31e893-b4f7-4ca0-b666-74e863b984d3" />
 
 
-# forgeflow
+# forge
 
 > ⚠️ **Alpha.** APIs, skill names, and the plan format may change without notice. Use on throwaway branches until it stabilizes.
 >
@@ -57,7 +57,7 @@ One path, two execution flavors. Context gathering and the debugger show up only
 
 | Skill | Role |
 |---|---|
-| `using-forgeflow` | Entry gate — routes dev tasks into the flow. |
+| `using-forge` | Entry gate — routes dev tasks into the flow. |
 | `writing-plans` | Gathers context, writes `.claude/plan/{slug}.md`. |
 | `executing-plans` | Runs the plan in-session. |
 | `subagent-execution` | Runs the plan via one subagent per STEP. |
@@ -84,7 +84,7 @@ A single markdown file at `.claude/plan/{slug}.md`.
 
 There is no orchestrator. The skills chain themselves:
 
-1. You describe a dev task → Claude Code's skill matcher fires `using-forgeflow` (meta) which checks whether `writing-plans` applies. For any non-trivial code task, it does.
+1. You describe a dev task → Claude Code's skill matcher fires `using-forge` (meta) which checks whether `writing-plans` applies. For any non-trivial code task, it does.
 2. `writing-plans` runs → writes the plan → prints the handoff block.
 3. You pick `1` or `2` → that skill fires and executes.
 4. Executor ends by offering `test-runner`.
@@ -113,21 +113,21 @@ You can also invoke any skill directly:
 The repo ships its own single-repo marketplace (`.claude-plugin/marketplace.json`), so two commands install it:
 
 ```bash
-claude plugin marketplace add anthonyespirat/forgeflow
-claude plugin install forgeflow@forgeflow-marketplace
+claude plugin marketplace add anthonyespirat/forge
+claude plugin install forge@forge-marketplace
 ```
 
 Or from inside a Claude Code session:
 
 ```
-/plugin marketplace add anthonyespirat/forgeflow
-/plugin install forgeflow@forgeflow-marketplace
+/plugin marketplace add anthonyespirat/forge
+/plugin install forge@forge-marketplace
 ```
 
 Uninstall:
 
 ```bash
-claude plugin uninstall forgeflow
+claude plugin uninstall forge
 ```
 
 ### Manual copy (no plugin system)
@@ -148,7 +148,7 @@ cp -r skills/* ~/.config/opencode/skill/
 
 ## Usage
 
-Just describe the task — `using-forgeflow` + `writing-plans` trigger automatically:
+Just describe the task — `using-forge` + `writing-plans` trigger automatically:
 
 ```
 add a rate limiter to the login endpoint
@@ -165,13 +165,13 @@ The flow: plan is written, you're shown a summary + the path + two mode options.
 ## Repository layout
 
 ```
-forgeflow/
+forge/
 ├── .claude-plugin/
 │   ├── plugin.json
 │   └── marketplace.json
 ├── README.md
 ├── skills/
-│   ├── using-forgeflow/SKILL.md
+│   ├── using-forge/SKILL.md
 │   ├── writing-plans/SKILL.md
 │   ├── executing-plans/SKILL.md
 │   ├── subagent-execution/SKILL.md

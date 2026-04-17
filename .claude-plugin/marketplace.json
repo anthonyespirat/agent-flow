@@ -1,11 +1,11 @@
 {
-  "name": "forgeflow-marketplace",
+  "name": "forge-marketplace",
   "owner": {
     "name": "Anthony Espirat"
   },
   "plugins": [
     {
-      "name": "forgeflow",
+      "name": "forge",
       "source": "./",
       "description": "Skill-driven dev workflow. writing-plans gathers context via sub-agents and writes .claude/plan/{slug}.md, then hands off to either in-session execution (executing-plans) or subagent-driven execution (subagent-execution). Includes a shared debugger skill for on-demand diagnosis."
     }
