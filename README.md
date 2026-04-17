@@ -1,3 +1,6 @@
+<img width="1573" height="558" alt="image" src="https://github.com/user-attachments/assets/fc31e893-b4f7-4ca0-b666-74e863b984d3" />
+
+
 # agent-flow
 
 A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator, no forced human checkpoints. Skills trigger on intent and hand off to each other.
