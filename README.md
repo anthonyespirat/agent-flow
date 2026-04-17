@@ -4,6 +4,8 @@
 # agent-flow
 
 > ⚠️ **Alpha.** APIs, skill names, and the plan format may change without notice. Use on throwaway branches until it stabilizes.
+>
+> Currently biased toward **TypeScript** projects (typecheck defaults, suggested skills, assumed tooling). PRs welcome to make it language-agnostic.
 
 A skill-driven dev workflow for Claude Code (and opencode): **describe → plan → pick mode → execute → test**. No orchestrator. Skills trigger on intent and hand off to each other.
 
