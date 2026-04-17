@@ -1,7 +1,7 @@
 ---
 name: codebase-explorer
 description: Maps the codebase before planning using GitNexus knowledge graph. Picks the right gitnexus skill based on task type (exploring, debugging, impact-analysis, refactoring), scans local skills folders for pattern/component guidelines, and returns a condensed report for the planner.
-tools: gitnexus, Read
+tools: mcp__gitnexus__query, mcp__gitnexus__context, mcp__gitnexus__impact, mcp__gitnexus__cypher,mcp__gitnexus__detect_changes, mcp__gitnexus__list_repos, mcp__gitnexus__rename, Read, Glob, Grep
 ---
 
 # codebase-explorer
