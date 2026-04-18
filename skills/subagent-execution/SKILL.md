@@ -13,6 +13,16 @@ Execute a plan by dispatching a fresh subagent per STEP. You (the controller) ow
 
 Each subagent gets exactly the context it needs for its step — no more, no less. They don't inherit this conversation's history. You curate their inputs and review their summaries. Your context stays focused on orchestration.
 
+## Model selection
+
+Set `model` per `Agent` dispatch. Pick the cheapest that can plausibly finish — but a failed dispatch costs more than the opus premium, so route uncertainty up.
+
+- **`haiku`** — mechanical, fully-specified edit in 1–2 files (rename, add a field, isolated pure function).
+- **`sonnet`** — known-shape multi-file edit, integrating existing patterns, debugging.
+- **`opus`** — design judgment, cross-cutting refactors, unfamiliar code, `BLOCKED` re-dispatch on a reasoning gap, or genuine uncertainty about step difficulty.
+
+Upgrade signals: 3+ files, crosses a module boundary, step says "decide/design/choose". Downgrade signals: exact edit specified, prior similar step succeeded on `haiku`. Reviewer subagents match or exceed the implementer's model.
+
 ## Input
 
 - Path to the validated plan file (e.g. `.claude/plan/eng-123.md`). If the user didn't give it explicitly, use the most recent file in `.claude/plan/`.
@@ -54,15 +64,25 @@ You (controller) own this todo. You update it as each subagent reports back.
 
 ### Step 4 — Dispatch loop
 
-For each step in order:
+Group steps into **parallel batches** before dispatching anything.
 
-1. `TodoWrite` → mark the current step `in_progress`.
-2. Dispatch a **fresh general-purpose subagent** (`Agent` tool, `subagent_type: general-purpose`) using the template at `./implementer-prompt.md`. Fill in STEP, SCENE, RELEVANT FILES, GUIDELINE SKILLS, and (if applicable) PRIOR-STEP OUTPUTS.
-3. Wait for the subagent's report.
-4. Handle the status (see Step 5).
-5. When the step is accepted: `TodoWrite` → mark `completed`, move to next step.
+**Two steps share a batch iff both hold:**
+- **Disjoint files.** Their RELEVANT FILES (from Step 2) don't overlap. Treat directory specs (`src/foo/**`) as covering the whole subtree. If a step's file set is vague or missing, it is its own batch.
+- **No dependency.** Neither step's PRIOR-STEP OUTPUTS names the other; neither references a symbol/file the other creates, renames, or deletes; neither needs to observe the other's effect to make a decision.
 
-Never run multiple subagents in parallel for steps that touch overlapping files — conflicts.
+Walk steps top-to-bottom. Open a new batch the moment the next step overlaps files with — or depends on — anyone already in the current batch. **When in doubt, sequentialize.** A wasted-parallel batch costs nothing; a conflicting one costs a re-dispatch and risks silent corruption (two subagents racing on the same file, last write wins).
+
+**For each batch, in order:**
+
+1. `TodoWrite` → mark every step in the batch `in_progress`.
+2. **In a single assistant message**, emit one `Agent` tool call per step in the batch (`subagent_type: general-purpose`, `model` chosen per [Model selection](#model-selection), prompt from `./implementer-prompt.md` filled with that step's STEP, SCENE, RELEVANT FILES, GUIDELINE SKILLS, PRIOR-STEP OUTPUTS). One message with N tool calls is the only way they actually run concurrently — separate messages serialize them.
+3. Wait for **all** reports in the batch before reacting.
+4. Handle each step's status independently per Step 5. A BLOCKED step does **not** invalidate its batch-mates' work — mark successful siblings `completed`, then resolve the failed step before opening the next batch.
+5. If any BLOCKED report reveals a plan-level error (contradiction, missing dependency), STOP before opening the next batch.
+
+A batch of one degenerates to the sequential case.
+
+
 
 ### Step 5 — Handle the subagent's status
 
