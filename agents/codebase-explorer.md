@@ -88,9 +88,9 @@ SCOPE DETECTED: backend | frontend | fullstack
 - If GitNexus isn't indexed for this repo (`list_repos` returns nothing relevant), STOP and report: "Repo not indexed — user should run `gitnexus analyze`." Don't fall back to manual grep.
 - If no guideline skills apply, say so — don't invent conventions.
 
-## Output compression (optional)
+## Output compression (default-on)
 
-If the `caveman` skill is available, invoke it at `caveman-full` and write the **free-text content** of these sections in caveman: `GUIDELINE SKILLS FOUND` (the "why it applies" and "key rules" parts), `PATTERNS TO FOLLOW`, and `GOTCHAS`. Your report is consumed by the `writing-plans` skill as machine context, not shown to the user — caveman roughly halves the tokens without losing signal.
+Your report is consumed by `writing-plans` as machine context, not shown to the user. **If the `caveman` skill is available, use it by default** — invoke it at `caveman-full` and write the **free-text content** of these sections in caveman: `GUIDELINE SKILLS FOUND` (the "why it applies" and "key rules" parts), `PATTERNS TO FOLLOW`, and `GOTCHAS`. Caveman roughly halves the tokens without losing signal, which compounds across the steps dispatched downstream.
 
 **Keep plain (never caveman):**
 - Section headers themselves (`TASK CLASS:`, `GITNEXUS PATH:`, etc.)
@@ -98,4 +98,4 @@ If the `caveman` skill is available, invoke it at `caveman-full` and write the *
 - File paths, symbol names, skill names, and any impact scores
 - The "Repo not indexed" error message if you have to emit it
 
-If `caveman` isn't available, write plain English. Don't fake caveman style on your own — the skill does it correctly.
+If `caveman` isn't available, fall back to plain English. Don't fake caveman style yourself — the skill does it correctly.

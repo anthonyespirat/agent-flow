@@ -15,13 +15,25 @@ Each subagent gets exactly the context it needs for its step — no more, no les
 
 ## Model selection
 
-Set `model` per `Agent` dispatch. Pick the cheapest that can plausibly finish — but a failed dispatch costs more than the opus premium, so route uncertainty up.
+Set `model` per `Agent` dispatch. **Default to `sonnet`.** Upgrade to `opus` only when the step has an explicit upgrade signal — opus is not the fallback for "I'm not sure". Unset defaults silently become expensive; be deliberate.
 
-- **`haiku`** — mechanical, fully-specified edit in 1–2 files (rename, add a field, isolated pure function).
-- **`sonnet`** — known-shape multi-file edit, integrating existing patterns, debugging.
-- **`opus`** — design judgment, cross-cutting refactors, unfamiliar code, `BLOCKED` re-dispatch on a reasoning gap, or genuine uncertainty about step difficulty.
+- **`haiku`** — mechanical, fully-specified edit in 1–2 files (rename, add a field, isolated pure function); also the right model for `[mechanical]`-tagged steps on the rare occasions you dispatch one instead of executing directly.
+- **`sonnet`** — *default*: known-shape multi-file edit, integrating existing patterns, debugging.
+- **`opus`** — upgrade only: design judgment, cross-cutting refactor, unfamiliar code, or `BLOCKED` re-dispatch on a reasoning gap.
 
-Upgrade signals: 3+ files, crosses a module boundary, step says "decide/design/choose". Downgrade signals: exact edit specified, prior similar step succeeded on `haiku`. Reviewer subagents match or exceed the implementer's model.
+Upgrade signals (sonnet → opus): 3+ files crossing a module boundary, step says "decide/design/choose", architectural judgment required, or a prior dispatch on the same step failed for reasoning. Downgrade signals (sonnet → haiku): exact edit specified, prior similar step succeeded on `haiku`, step tagged `[mechanical]`. Reviewer subagents match or exceed the implementer's model.
+
+## Mechanical steps — skip dispatch
+
+If a STEP is fully specified with zero judgment calls — running a one-shot shell recipe, scaffolding boilerplate from a known template, generating deterministic config — the controller MAY execute it directly with its own tools instead of dispatching a subagent. A dispatch round-trip costs more than the edit.
+
+Indicators the step is mechanical:
+
+- Tagged `[mechanical]` in the plan (see `writing-plans`).
+- Entire content is a shell command, dependency install, or file-copy recipe.
+- Zero branches / alternative outcomes; no files need reading beyond the single target.
+
+When you skip dispatch, note it in the final report (`DIRECT EXECUTIONS:` line alongside `SUBAGENT DISPATCHES:`). When unsure, dispatch — this is an exception to "one subagent per step", not a second default path.
 
 ## Input
 
@@ -130,6 +142,8 @@ STEPS COMPLETED: <N of M>
 
 SUBAGENT DISPATCHES: <count> (<re-dispatches if any>)
 
+DIRECT EXECUTIONS: <count of mechanical steps executed without dispatch>
+
 NOTES:
 - <anything notable from subagent reports>
 ```
@@ -155,7 +169,7 @@ Read it once at the start of Step 4 and use it verbatim, filling in the placehol
 ## Rules
 
 - **You are the controller.** Don't edit files yourself in this skill. If you find yourself reaching for `Edit`, stop — dispatch a subagent instead.
-- **One subagent per step.** Don't bundle steps unless the plan has a clear coupling that makes them non-separable (flag this during the critical review and tell the user before doing it).
+- **One subagent per step** — with one exception: `[mechanical]` / fully-specified steps that the controller executes directly (see [Mechanical steps](#mechanical-steps--skip-dispatch)). Don't bundle unrelated steps.
 - **Fresh context per dispatch.** Never chain subagents by passing one's output as literal context to the next unless the plan step explicitly depends on it — and even then, summarize, don't forward.
 - **Cap the final report at ~400 words.** The user reviews the diff.
 - **Escalate instead of looping.** Two failed dispatches on the same step → stop and ask the user.

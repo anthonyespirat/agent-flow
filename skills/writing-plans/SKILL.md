@@ -34,6 +34,10 @@ Write the plan file using the format below. Lead with the minimal change set tha
 
 **Every STEP must start with `- [ ]`** — the executor will build its todo from these.
 
+**Tag mechanical steps `[mechanical]`.** If a step is a scripted recipe — a shell command, a dependency install, deterministic scaffolding, zero judgment — append `[mechanical]` to the step text. `subagent-execution` treats tagged steps as a signal that the controller may execute them directly instead of dispatching, saving an entire round-trip.
+
+**Attach `EXCERPTS` where they save re-reads.** If a step's implementer will need a specific type signature, config block, or snippet that already exists in the repo, paste it under a nested `EXCERPTS:` block right below the step. The executor pastes these verbatim into the dispatch prompt — no re-reads, no drift. Ad-hoc inlining works; codifying it keeps it consistent.
+
 ### Step 3 — Self-review
 
 After writing the file, read it again with fresh eyes and fix inline:
@@ -44,8 +48,10 @@ After writing the file, read it again with fresh eyes and fix inline:
    - `add appropriate error handling`, `handle edge cases` without saying which
    - `similar to step N` (repeat the detail — the executor may read steps out of order)
    - references to types/functions/files not defined anywhere in the plan or the repo
-3. **Consistency.** Names used in later steps match names defined in earlier ones. A function called `clearLayers()` in step 2 but `clearFullLayers()` in step 5 is a bug.
-4. **Scope.** Are any STEPS outside what the user asked for? Move to `OUT OF SCOPE` or delete.
+3. **Mechanical audit.** For each step, ask: "Is the entire content a shell command, a dependency install, or a deterministic recipe with zero branches?" If yes and the step isn't already tagged, append `[mechanical]` so the executor can skip dispatch.
+4. **File-count budget.** No single STEP touches more than 6 new files. If a step does — especially if it bundles unrelated surfaces (e.g. admin + wishlist + settings) — split it. Large bundled steps are the most common cause of over-scoped subagent runs.
+5. **Consistency.** Names used in later steps match names defined in earlier ones. A function called `clearLayers()` in step 2 but `clearFullLayers()` in step 5 is a bug.
+6. **Scope.** Are any STEPS outside what the user asked for? Move to `OUT OF SCOPE` or delete.
 
 Fix issues inline. No need to re-review — just fix and move on.
 
@@ -100,9 +106,13 @@ Then wait for the user's answer.
 
 ## STEPS
 - [ ] 1. <step — specific enough to review, code-block only if a signature/assertion is non-obvious>
-- [ ] 2. <step>
+- [ ] 2. <step> [mechanical]    <!-- append tag when the step is a scripted recipe with zero judgment -->
 - [ ] 3. <step>
-(typically 3–7 steps)
+  EXCERPTS:
+    <optional nested block — paste type signatures, snippets, or configs verbatim.
+     The subagent-execution controller pastes this into the dispatch prompt so the
+     implementer doesn't need to Read to confirm shapes.>
+(typically 3–7 steps; no single step should touch more than 6 new files)
 
 ## TESTS TO UPDATE/ADD
 - <test file or scenario>
@@ -118,6 +128,8 @@ Then wait for the user's answer.
 
 - **Intent over implementation.** Describe what changes and why. Code snippets allowed ONLY when a specific type signature, assertion, or interface shape is genuinely ambiguous without them. Not mandatory. Not per step.
 - **No placeholders.** See self-review. This is non-negotiable.
+- **File budget per step.** No single STEP touches more than 6 new files. Split unrelated surfaces into separate steps rather than bundling them.
+- **Mechanical tagging.** Tag pure-recipe steps `[mechanical]` — the executor can skip subagent dispatch for those, saving a full round-trip.
 - Every `FILES TO CHANGE` entry traces back to at least one STEP.
 - If the explorer flagged a gotcha, it MUST appear in `RISKS` or be addressed by a STEP.
 - If the task is ambiguous or the explorer surfaced missing info you can't resolve, write a `## QUESTIONS FOR USER` section INSTEAD OF `STEPS`, print the path, and stop. Don't leave unchecked steps that look actionable.
