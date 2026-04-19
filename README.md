@@ -18,7 +18,8 @@ A skill-driven dev workflow for Claude Code (and opencode): **describe → plan 
 - **Choice of isolation.** In-session for feedback fidelity, subagent-driven for big plans — you pick per task.
 - **Shared debugger.** Any executor loads it when stuck.
 - **No destructive ops without explicit ask.** No commits, pushes, or PRs from skills or subagents.
-- **Short reports.** Agent output capped (~200–500 words). Raw dumps kill context.
+- **Short reports.** Agent output capped (~150–500 words). Raw dumps kill context.
+- **Model-dynamic dispatch.** `subagent-execution` picks a model per step — `sonnet` default, `haiku` for mechanical edits, `opus` only when the step carries an explicit upgrade signal. Unset defaults silently become expensive; the controller is deliberate.
 - **🚀 [GitNexus](https://github.com/abhigyanpatwari/GitNexus) over grep.** Code exploration goes principaly through the GitNexus knowledge graph — faster, more precise, and far cheaper in tokens than repeated file scans.
 - **🦴 [Caveman](https://github.com/JuliusBrussee/caveman) for agent-to-agent.** Selected skills and sub-agents emit their machine-consumed sections (reports handed to another skill, not shown to the user) in caveman style — cuts the payload roughly in half while preserving signal.
 
